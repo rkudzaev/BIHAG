@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QUEST">
+<title>QUEST — Роберт</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Unbounded:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg2: #111111;
+    --bg3: #1a1a1a;
+    --line: #2a2a2a;
+    --text: #e8e4dc;
+    --muted: #5a5a5a;
+    --accent: #c8ff00;
+    --accent2: #ff6b35;
+    --red: #ff3b30;
+    --gold: #ffd60a;
+    --safe-top: env(safe-area-inset-top, 44px);
+    --safe-bot: env(safe-area-inset-bottom, 34px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; }
+
+  #app { height: 100%; display: flex; flex-direction: column; }
+
+  /* ---- HEADER ---- */
+  .hdr {
+    padding: calc(var(--safe-top) + 12px) 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .hdr-name { font-family: 'Unbounded', sans-serif; font-size: 11px; font-weight: 300; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+  .hdr-xp { font-size: 11px; color: var(--accent); letter-spacing: 0.05em; }
+  .hdr-lvl { font-family: 'Unbounded', sans-serif; font-size: 10px; color: var(--muted); }
+
+  /* ---- XP BAR ---- */
+  .xp-bar { height: 2px; background: var(--line); flex-shrink: 0; }
+  .xp-fill { height: 100%; background: var(--accent); transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+
+  /* ---- SCROLL AREA ---- */
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 0 calc(var(--safe-bot) + 80px); }
+
+  /* ---- MAP SECTION ---- */
+  .map-row { display: flex; gap: 8px; padding: 16px 20px 0; overflow-x: auto; scrollbar-width: none; }
+  .map-row::-webkit-scrollbar { display: none; }
+  .loc-chip {
+    flex-shrink: 0; padding: 8px 14px;
+    border: 1px solid var(--line); border-radius: 2px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s; color: var(--muted);
+    background: var(--bg2);
+  }
+  .loc-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(200,255,0,0.06); }
+  .loc-chip .loc-pct { display: block; font-size: 9px; margin-top: 2px; color: var(--muted); }
+
+  /* ---- SECTION LABEL ---- */
+  .sec-lbl { font-size: 9px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; padding: 20px 20px 8px; }
+
+  /* ---- QUEST CARD ---- */
+  .quest-card {
+    margin: 0 20px 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg2);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .quest-card.active-quest { border-color: var(--accent2); }
+  .quest-card.done-quest { opacity: 0.45; }
+
+  .qcard-top { padding: 14px 16px 12px; }
+  .qcard-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .qcard-loc { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .qcard-lvl { font-size: 9px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 1px; color: var(--muted); }
+  .qcard-xp-badge { font-size: 9px; color: var(--accent); margin-left: auto; }
+  .qcard-title { font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 400; line-height: 1.4; margin-bottom: 8px; }
+  .qcard-desc { font-size: 11px; line-height: 1.7; color: #888; }
+  .qcard-deadline { font-size: 10px; color: var(--accent2); margin-top: 8px; }
+
+  .qcard-actions { display: flex; border-top: 1px solid var(--line); }
+  .qcard-btn {
+    flex: 1; padding: 11px 8px;
+    font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+    background: transparent; border: none; cursor: pointer; color: var(--muted);
+    text-transform: uppercase; transition: all 0.15s;
+  }
+  .qcard-btn:hover { background: var(--bg3); color: var(--text); }
+  .qcard-btn.primary { color: var(--accent); }
+  .qcard-btn + .qcard-btn { border-left: 1px solid var(--line); }
+
+  /* ---- WEEKLY CHECK CARD ---- */
+  .check-card {
+    margin: 0 20px 10px;
+    border: 1px solid var(--gold);
+    border-radius: 2px;
+    background: rgba(255,214,10,0.04);
+    padding: 16px;
+  }
+  .check-card-title { font-family: 'Unbounded', sans-serif; font-size: 12px; color: var(--gold); margin-bottom: 8px; }
+  .check-card-text { font-size: 11px; color: #888; line-height: 1.7; margin-bottom: 12px; }
+  .check-input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--line); border-radius: 2px;
+    color: var(--text); font-family: 'Space Mono', monospace; font-size: 12px;
+    padding: 10px 12px; resize: none; min-height: 80px; margin-bottom: 10px;
+    outline: none;
+  }
+  .check-input:focus { border-color: var(--gold); }
+
+  /* ---- BOTTOM NAV ---- */
+  .bnav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 0 0 var(--safe-bot);
+    background: var(--bg); border-top: 1px solid var(--line);
+    display: flex; z-index: 100;
+  }
+  .bnav-btn {
+    flex: 1; padding: 14px 8px 12px;
+    background: transparent; border: none; cursor: pointer;
+    font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
+    color: var(--muted); text-transform: uppercase; text-align: center;
+    transition: color 0.15s;
+  }
+  .bnav-btn.active { color: var(--accent); }
+  .bnav-icon { font-size: 16px; display: block; margin-bottom: 3px; }
+
+  /* ---- OVERLAY ---- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    z-index: 200; display: flex; flex-direction: column;
+    padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bot) + 20px);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .overlay-title { font-family: 'Unbounded', sans-serif; font-size: 16px; margin-bottom: 8px; }
+  .overlay-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .overlay-content { flex: 1; overflow-y: auto; font-size: 12px; line-height: 1.9; color: #aaa; }
+  .overlay-content p { margin-bottom: 12px; }
+  .overlay-content strong { color: var(--text); font-weight: 700; }
+  .overlay-close {
+    margin-top: 16px; padding: 14px;
+    border: 1px solid var(--line); border-radius: 2px;
+    background: transparent; color: var(--text); font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ---- LOADING ---- */
+  .loading { text-align: center; padding: 40px 20px; }
+  .loading-dot { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin: 0 3px; animation: blink 1.2s ease-in-out infinite; }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+  .loading-text { font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 12px; }
+
+  /* ---- STATS SCREEN ---- */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 20px 20px; }
+  .stat-box { border: 1px solid var(--line); border-radius: 2px; padding: 14px; }
+  .stat-box-val { font-family: 'Unbounded', sans-serif; font-size: 22px; font-weight: 300; }
+  .stat-box-lbl { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; }
+
+  .loc-progress { margin: 0 20px 10px; }
+  .loc-prog-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .loc-prog-name { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; width: 120px; flex-shrink: 0; }
+  .loc-prog-bar { flex: 1; height: 2px; background: var(--line); border-radius: 1px; overflow: hidden; }
+  .loc-prog-fill { height: 100%; background: var(--accent); transition: width 0.5s; }
+  .loc-prog-xp { font-size: 10px; color: var(--muted); width: 60px; text-align: right; flex-shrink: 0; }
+
+  /* ---- PULSE ANIMATION ---- */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .pulsing { animation: pulse 2s ease-in-out infinite; }
+
+  /* ---- TYPEWRITER ---- */
+  .typewriter { overflow: hidden; }
+
+  /* ---- ACTIVE INDICATOR ---- */
+  .active-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); display: inline-block; margin-right: 6px; animation: pulse 1.5s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div>
+      <div class="hdr-name">Robert · v1 · 2026</div>
+      <div class="hdr-lvl" id="hdr-lvl">Уровень 0</div>
+    </div>
+    <div style="text-align:right">
+      <div class="hdr-xp" id="hdr-xp">0 XP</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px" id="hdr-done">0 квестов</div>
+    </div>
+  </div>
+  <div class="xp-bar"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+
+  <div class="scroll" id="main-scroll">
+    <div id="screen-quests" style="display:block">
+      <div class="map-row" id="loc-chips"></div>
+      <div id="quests-content"></div>
+    </div>
+    <div id="screen-stats" style="display:none">
+      <div class="sec-lbl">Статус героя</div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="sec-lbl">Прогресс по локациям</div>
+      <div class="loc-progress" id="loc-progress"></div>
+      <div style="padding:0 20px 10px">
+        <button class="qcard-btn primary" style="border:1px solid var(--line);border-radius:2px;width:100%;padding:14px;font-size:10px;letter-spacing:0.1em" onclick="askClaude('Дай мне общую оценку прогресса и скажи, на какую локацию сейчас сделать упор', showOverlay)">Спросить оценку у Клода ↗</button>
+      </div>
+    </div>
+    <div id="screen-check" style="display:none">
+      <div class="sec-lbl">Еженедельный чек-ин</div>
+      <div style="padding:0 20px">
+        <div class="check-card" id="checkin-card">
+          <div class="check-card-title">⚡ Время синхронизации</div>
+          <div class="check-card-text" id="checkin-question">Как прошла неделя? Что сделал, что не успел, что мешало?</div>
+          <textarea class="check-input" id="checkin-input" placeholder="Пиши честно — без этого квесты не адаптируются..."></textarea>
+          <button class="qcard-btn primary" style="border:1px solid var(--gold);border-radius:2px;width:100%;padding:12px;color:var(--gold);font-size:10px;letter-spacing:0.1em" onclick="submitCheckin()">Отправить и пересобрать квесты</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bnav">
+    <button class="bnav-btn active" id="nav-quests" onclick="switchTab('quests')">
+      <span class="bnav-icon">◈</span>Квесты
+    </button>
+    <button class="bnav-btn" id="nav-stats" onclick="switchTab('stats')">
+      <span class="bnav-icon">◎</span>Карта
+    </button>
+    <button class="bnav-btn" id="nav-check" onclick="switchTab('check')">
+      <span class="bnav-icon">◉</span>Чек-ин
+    </button>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlay-title" id="ov-title"></div>
+  <div class="overlay-sub" id="ov-sub"></div>
+  <div class="overlay-content" id="ov-content"></div>
+  <button class="overlay-close" onclick="closeOverlay()">Закрыть</button>
+</div>
+
+<script>
+const API_KEY = 'YOUR_API_KEY_HERE';
+
+const HERO = {
+  name: 'Роберт',
+  version: 'v1 · 2026',
+  totalXpTarget: 4000,
+};
+
+const LOCATIONS = [
+  { id: 'cinema', name: 'Кинемаполис', short: 'Кино РФ', color: '#c8ff00', xpTotal: 1000 },
+  { id: 'writer', name: 'Библиотека теней', short: 'Писатель', color: '#ff6b35', xpTotal: 1000 },
+  { id: 'hollywood', name: 'Врата Голливуда', short: 'Голливуд', color: '#ffd60a', xpTotal: 1000 },
+  { id: 'bmw', name: 'Гараж E39', short: 'BMW', color: '#888', xpTotal: 1000 },
+];
+
+const DEFAULT_QUESTS = [
+  {
+    id: 'q1', loc: 'cinema', lvl: 1, active: true,
+    title: 'Манифест режиссёра',
+    desc: 'Кто ты как режиссёр. Жанр, стиль, референсы. 1 страница. Это твоя "библия".',
+    xp: 50, deadline: 'Воскресенье',
+    prompt: 'Роберт написал манифест режиссёра. Дай конкретную обратную связь и следующий шаг для локации Кинемаполис.',
+  },
+  {
+    id: 'q2', loc: 'writer', lvl: 1, active: true,
+    title: 'Первая страница',
+    desc: 'Открой документ. Напиши первые 400 слов. Без редактуры. Поток сознания.',
+    xp: 30, deadline: 'Суббота',
+    prompt: 'Роберт написал первую страницу книги. Как развить этот импульс? Следующий шаг.',
+  },
+  {
+    id: 'q3', loc: 'bmw', lvl: 1, active: false,
+    title: 'Аудит BMW E39',
+    desc: 'Список всего что нужно: кузов, салон, механика, электрика. 3 постерных референса в папку.',
+    xp: 20, deadline: 'Пятница',
+    prompt: 'Роберт сделал аудит BMW E39. Помоги расставить приоритеты по восстановлению.',
+  },
+  {
+    id: 'q4', loc: 'hollywood', lvl: 1, active: false,
+    title: 'Насмотренность A24',
+    desc: 'Посмотри 5 фильмов A24 этой недели. После каждого — 3 строки разбора: что цепляет визуально.',
+    xp: 40, deadline: 'Воскресенье',
+    prompt: 'Роберт разобрал 5 фильмов A24. Что нужно делать дальше для выхода на международный рынок?',
+  },
+];
+
+// STATE
+let state = {
+  quests: JSON.parse(localStorage.getItem('rpg_quests') || 'null') || DEFAULT_QUESTS,
+  xp: JSON.parse(localStorage.getItem('rpg_xp') || '{}'),
+  done: parseInt(localStorage.getItem('rpg_done') || '0'),
+  locFilter: 'all',
+  lastCheckin: localStorage.getItem('rpg_lastCheckin') || null,
+  checkinHistory: JSON.parse(localStorage.getItem('rpg_checkinHistory') || '[]'),
+};
+
+function saveState() {
+  localStorage.setItem('rpg_quests', JSON.stringify(state.quests));
+  localStorage.setItem('rpg_xp', JSON.stringify(state.xp));
+  localStorage.setItem('rpg_done', state.done);
+  localStorage.setItem('rpg_lastCheckin', state.lastCheckin);
+  localStorage.setItem('rpg_checkinHistory', JSON.stringify(state.checkinHistory));
+}
+
+function totalXp() {
+  return Object.values(state.xp).reduce((a,b) => a+b, 0);
+}
+
+function locXp(locId) {
+  return state.quests.filter(q => q.loc === locId && q.done).reduce((s,q) => s+q.xp, 0);
+}
+
+function updateHeader() {
+  const xp = totalXp();
+  const lvl = Math.floor(xp / 400);
+  document.getElementById('hdr-xp').textContent = xp + ' XP';
+  document.getElementById('hdr-lvl').textContent = 'Уровень ' + lvl;
+  document.getElementById('hdr-done').textContent = state.done + ' квест' + (state.done === 1 ? '' : state.done < 5 ? 'а' : 'ов');
+  const pct = Math.min(100, Math.round(xp / HERO.totalXpTarget * 100));
+  document.getElementById('xp-fill').style.width = pct + '%';
+}
+
+function renderChips() {
+  const row = document.getElementById('loc-chips');
+  row.innerHTML = '';
+  const all = document.createElement('div');
+  all.className = 'loc-chip' + (state.locFilter === 'all' ? ' active' : '');
+  all.innerHTML = 'Все<span class="loc-pct">— все квесты</span>';
+  all.onclick = () => { state.locFilter = 'all'; renderChips(); renderQuests(); };
+  row.appendChild(all);
+
+  LOCATIONS.forEach(loc => {
+    const xp = locXp(loc.id);
+    const pct = Math.round(xp / loc.xpTotal * 100);
+    const chip = document.createElement('div');
+    chip.className = 'loc-chip' + (state.locFilter === loc.id ? ' active' : '');
+    chip.innerHTML = loc.short + '<span class="loc-pct">' + pct + '% — ' + xp + ' XP</span>';
+    if (state.locFilter === loc.id) chip.style.borderColor = loc.color;
+    chip.onclick = () => { state.locFilter = loc.id; renderChips(); renderQuests(); };
+    row.appendChild(chip);
+  });
+}
+
+function renderQuests() {
+  const container = document.getElementById('quests-content');
+  container.innerHTML = '';
+
+  const filtered = state.quests.filter(q =>
+    state.locFilter === 'all' || q.loc === state.locFilter
+  );
+
+  const active = filtered.filter(q => !q.done);
+  const done = filtered.filter(q => q.done);
+
+  if (active.length === 0 && done.length === 0) {
+    container.innerHTML = '<div class="loading"><div class="loading-text">Нет квестов в этой локации</div></div>';
+    return;
+  }
+
+  if (active.length > 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'sec-lbl';
+    lbl.innerHTML = '<span class="active-dot"></span>Активные квесты';
+    container.appendChild(lbl);
+    active.forEach(q => container.appendChild(buildQuestCard(q)));
+  }
+
+  if (done.length > 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'sec-lbl';
+    lbl.textContent = 'Выполнено';
+    container.appendChild(lbl);
+    done.forEach(q => container.appendChild(buildQuestCard(q)));
+  }
+}
+
+function buildQuestCard(q) {
+  const loc = LOCATIONS.find(l => l.id === q.loc);
+  const card = document.createElement('div');
+  card.className = 'quest-card' + (q.active ? ' active-quest' : '') + (q.done ? ' done-quest' : '');
+
+  card.innerHTML = `
+    <div class="qcard-top">
+      <div class="qcard-meta">
+        <span class="qcard-loc">${loc ? loc.short : q.loc}</span>
+        <span class="qcard-lvl">Ур.${q.lvl}</span>
+        <span class="qcard-xp-badge">+${q.xp} XP</span>
+      </div>
+      <div class="qcard-title">${q.title}</div>
+      <div class="qcard-desc">${q.desc}</div>
+      ${q.deadline && !q.done ? `<div class="qcard-deadline">⏱ ${q.deadline}</div>` : ''}
+    </div>
+    <div class="qcard-actions">
+      ${!q.done ? `<button class="qcard-btn primary" onclick="completeQuest('${q.id}')">Выполнил ✓</button>` : '<button class="qcard-btn" disabled>Готово</button>'}
+      <button class="qcard-btn" onclick="expandQuest('${q.id}')">Подробнее →</button>
+    </div>
+  `;
+  return card;
+}
+
+function completeQuest(qid) {
+  const q = state.quests.find(x => x.id === qid);
+  if (!q || q.done) return;
+  q.done = true;
+  state.xp[q.loc] = (state.xp[q.loc] || 0) + q.xp;
+  state.done++;
+  saveState();
+  updateHeader();
+  renderChips();
+  renderQuests();
+  // Ask Claude for next step
+  const prompt = q.prompt || `Роберт выполнил квест "${q.title}" в локации ${q.loc}. Что делать дальше? Дай конкретный следующий квест.`;
+  askClaude(prompt, (text) => {
+    showOverlay('Квест выполнен! +' + q.xp + ' XP', q.title, text);
+    maybeAddNewQuest(q.loc, text);
+  });
+}
+
+function expandQuest(qid) {
+  const q = state.quests.find(x => x.id === qid);
+  if (!q) return;
+  const loc = LOCATIONS.find(l => l.id === q.loc);
+  const prompt = `Дай подробный план выполнения квеста "${q.title}" для Роберта (режиссёр, Москва, киношкола, маркетинг-менеджер в авиакомпании). Конкретные шаги. Без воды.`;
+  showOverlay(q.title, (loc ? loc.short : '') + ' · Ур.' + q.lvl + ' · +' + q.xp + ' XP', '<div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span><div class="loading-text">Загружаю стратегию...</div></div>');
+  askClaude(prompt, (text) => {
+    document.getElementById('ov-content').innerHTML = formatText(text);
+  });
+}
+
+function maybeAddNewQuest(locId, claudeText) {
+  // Try to extract a quest from Claude's response and add it
+  const prompt = `На основе твоего ответа сформулируй 1 новый конкретный квест для Роберта в локации ${locId}. Формат JSON: {"title":"...","desc":"...","xp":50,"lvl":1,"deadline":"..."} — только JSON, без лишнего текста.`;
+  askClaudeRaw(prompt, (text) => {
+    try {
+      const clean = text.replace(/```json|```/g,'').trim();
+      const data = JSON.parse(clean);
+      const newQ = {
+        id: 'q' + Date.now(),
+        loc: locId,
+        lvl: data.lvl || 1,
+        active: false,
+        title: data.title,
+        desc: data.desc,
+        xp: data.xp || 50,
+        deadline: data.deadline || 'Без дедлайна',
+        prompt: `Роберт выполнил квест "${data.title}". Следующий шаг?`,
+        generated: true,
+      };
+      state.quests.push(newQ);
+      saveState();
+      renderQuests();
+    } catch(e) {}
+  });
+}
+
+function submitCheckin() {
+  const input = document.getElementById('checkin-input').value.trim();
+  if (!input) return;
+  const btn = document.querySelector('#screen-check .qcard-btn');
+  btn.textContent = 'Анализирую...';
+  btn.disabled = true;
+
+  const history = state.checkinHistory.slice(-3).map(c => c.text).join('\n\n---\n\n');
+  const prompt = `Ты — мастер RPG-квеста. Контекст героя: Роберт, режиссёр и писатель, Москва.
+Цели: 1) Режиссёр в РФ 2) Писатель в РФ 3) Режиссёр в Голливуде 4) BMW E39 как с постера.
+
+Чек-ин Роберта за неделю:
+"${input}"
+
+${history ? 'Предыдущие чек-ины:\n' + history : ''}
+
+На основе чек-ина:
+1. Дай короткую оценку недели (2-3 предложения)
+2. Предложи 2-3 скорректированных квеста с учётом реального темпа и контекста
+3. Что изменить в приоритетах?
+
+Будь конкретным. Без воды.`;
+
+  state.checkinHistory.push({ date: new Date().toISOString(), text: input });
+  state.lastCheckin = new Date().toISOString();
+  saveState();
+
+  askClaude(prompt, (text) => {
+    document.getElementById('checkin-input').value = '';
+    btn.textContent = 'Отправить и пересобрать квесты';
+    btn.disabled = false;
+    showOverlay('Синхронизация', 'Чек-ин принят', text);
+    parseAndUpdateQuests(text);
+  });
+}
+
+function parseAndUpdateQuests(text) {
+  const prompt = `На основе этого анализа чек-ина сформулируй 2 новых адаптированных квеста для Роберта. Формат JSON массив: [{"title":"...","desc":"...","xp":50,"lvl":1,"loc":"cinema|writer|hollywood|bmw","deadline":"..."}] — только JSON.
+
+Анализ: ${text}`;
+  askClaudeRaw(prompt, (raw) => {
+    try {
+      const clean = raw.replace(/```json|```/g,'').trim();
+      const arr = JSON.parse(clean);
+      arr.forEach(data => {
+        const newQ = {
+          id: 'q' + Date.now() + Math.random(),
+          loc: data.loc || 'cinema',
+          lvl: data.lvl || 1,
+          active: true,
+          title: data.title,
+          desc: data.desc,
+          xp: data.xp || 50,
+          deadline: data.deadline || 'На этой неделе',
+          prompt: `Роберт выполнил "${data.title}". Следующий шаг?`,
+          generated: true,
+          fromCheckin: true,
+        };
+        state.quests.push(newQ);
+      });
+      saveState();
+      renderQuests();
+    } catch(e) {}
+  });
+}
+
+function renderStats() {
+  const xp = totalXp();
+  const lvl = Math.floor(xp / 400);
+  const done = state.done;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-box">
+      <div class="stat-box-val">${lvl}</div>
+      <div class="stat-box-lbl">Уровень</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-val">${xp}</div>
+      <div class="stat-box-lbl">Всего XP</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-val">${done}</div>
+      <div class="stat-box-lbl">Выполнено</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-box-val">${state.quests.filter(q=>!q.done).length}</div>
+      <div class="stat-box-lbl">Активных</div>
+    </div>
+  `;
+
+  const lp = document.getElementById('loc-progress');
+  lp.innerHTML = '';
+  LOCATIONS.forEach(loc => {
+    const xpE = locXp(loc.id);
+    const pct = Math.round(xpE / loc.xpTotal * 100);
+    lp.innerHTML += `
+      <div class="loc-prog-row">
+        <div class="loc-prog-name">${loc.short}</div>
+        <div class="loc-prog-bar"><div class="loc-prog-fill" style="width:${pct}%;background:${loc.color}"></div></div>
+        <div class="loc-prog-xp">${xpE}/${loc.xpTotal}</div>
+      </div>`;
+  });
+}
+
+// Tab switching
+function switchTab(tab) {
+  ['quests','stats','check'].forEach(t => {
+    document.getElementById('screen-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('nav-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'stats') renderStats();
+  if (tab === 'check') checkWeeklyTrigger();
+}
+
+function checkWeeklyTrigger() {
+  if (!state.lastCheckin) return;
+  const last = new Date(state.lastCheckin);
+  const now = new Date();
+  const daysDiff = (now - last) / (1000 * 60 * 60 * 24);
+  if (daysDiff > 7) {
+    document.getElementById('checkin-question').textContent = '7 дней прошло. Время синхронизации — как идут дела?';
+  }
+}
+
+// Claude API
+async function askClaude(userPrompt, callback) {
+  const systemPrompt = `Ты — мастер RPG-квеста по реальной жизни для Роберта.
+Роберт: режиссёр-самоучка, Москва. Учится в киношколе. Работает маркетинг-менеджером в авиакомпании Победа. Снимает как оператор на коммерческих заказах. Цели: стать режиссёром в РФ, писателем, попасть в Голливуд (A24), восстановить BMW E39 530 до постерного вида.
+
+Стиль ответов:
+- Короткие предложения (3-6 слов)
+- Без воды и вводных слов
+- Конкретные действия
+- RPG-атмосфера
+- Русский язык`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.map(b => b.text || '').join('') || 'Ошибка ответа.';
+    callback(text);
+  } catch(e) {
+    callback('Нет соединения. Проверь интернет.');
+  }
+}
+
+async function askClaudeRaw(prompt, callback) {
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        messages: [{ role: 'user', content: prompt }],
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.map(b => b.text || '').join('') || '';
+    callback(text);
+  } catch(e) { callback(''); }
+}
+
+// Overlay
+function showOverlay(title, sub, content) {
+  document.getElementById('ov-title').textContent = title;
+  document.getElementById('ov-sub').textContent = sub;
+  document.getElementById('ov-content').innerHTML = typeof content === 'string' ? formatText(content) : content;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function formatText(text) {
+  return '<p>' + text.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>') + '</p>';
+}
+
+// Init
+updateHeader();
+renderChips();
+renderQuests();
+
+// Weekly random checkin prompt (10% chance on open)
+setTimeout(() => {
+  if (Math.random() < 0.1 && !state.lastCheckin) {
+    switchTab('check');
+  }
+}, 2000);
+</script>
+</body>
+</html>
