@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QUEST">
+<title>QUEST — Роберт</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Unbounded:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg2: #111111;
+    --bg3: #1a1a1a;
+    --line: #2a2a2a;
+    --text: #e8e4dc;
+    --muted: #5a5a5a;
+    --accent: #c8ff00;
+    --accent2: #ff6b35;
+    --red: #ff3b30;
+    --gold: #ffd60a;
+    --safe-top: env(safe-area-inset-top, 44px);
+    --safe-bot: env(safe-area-inset-bottom, 34px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Space Mono', monospace; }
+  #app { height: 100%; display: flex; flex-direction: column; }
+  .hdr {
+    padding: calc(var(--safe-top) + 12px) 20px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .hdr-name { font-family: 'Unbounded', sans-serif; font-size: 11px; font-weight: 300; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+  .hdr-xp { font-size: 11px; color: var(--accent); letter-spacing: 0.05em; }
+  .hdr-lvl { font-family: 'Unbounded', sans-serif; font-size: 10px; color: var(--muted); }
+  .xp-bar { height: 2px; background: var(--line); flex-shrink: 0; }
+  .xp-fill { height: 100%; background: var(--accent); transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 0 calc(var(--safe-bot) + 80px); }
+  .map-row { display: flex; gap: 8px; padding: 16px 20px 0; overflow-x: auto; scrollbar-width: none; }
+  .map-row::-webkit-scrollbar { display: none; }
+  .loc-chip {
+    flex-shrink: 0; padding: 8px 14px;
+    border: 1px solid var(--line); border-radius: 2px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s; color: var(--muted);
+    background: var(--bg2);
+  }
+  .loc-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(200,255,0,0.06); }
+  .loc-chip .loc-pct { display: block; font-size: 9px; margin-top: 2px; color: var(--muted); }
+  .sec-lbl { font-size: 9px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; padding: 20px 20px 8px; }
+  .quest-card {
+    margin: 0 20px 10px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--bg2);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .quest-card.active-quest { border-color: var(--accent2); }
+  .quest-card.done-quest { opacity: 0.45; }
+  .qcard-top { padding: 14px 16px 12px; }
+  .qcard-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .qcard-loc { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .qcard-lvl { font-size: 9px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 1px; color: var(--muted); }
+  .qcard-xp-badge { font-size: 9px; color: var(--accent); margin-left: auto; }
+  .qcard-title { font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 400; line-height: 1.4; margin-bottom: 8px; }
+  .qcard-desc { font-size: 11px; line-height: 1.7; color: #888; }
+  .qcard-deadline { font-size: 10px; color: var(--accent2); margin-top: 8px; }
+  .qcard-actions { display: flex; border-top: 1px solid var(--line); }
+  .qcard-btn {
+    flex: 1; padding: 11px 8px;
+    font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 0.1em;
+    background: transparent; border: none; cursor: pointer; color: var(--muted);
+    text-transform: uppercase; transition: all 0.15s;
+  }
+  .qcard-btn:hover { background: var(--bg3); color: var(--text); }
+  .qcard-btn.primary { color: var(--accent); }
+  .qcard-btn + .qcard-btn { border-left: 1px solid var(--line); }
+  .bnav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 0 0 var(--safe-bot);
+    background: var(--bg); border-top: 1px solid var(--line);
+    display: flex; z-index: 100;
+  }
+  .bnav-btn {
+    flex: 1; padding: 14px 8px 12px;
+    background: transparent; border: none; cursor: pointer;
+    font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
+    color: var(--muted); text-transform: uppercase; text-align: center;
+    transition: color 0.15s;
+  }
+  .bnav-btn.active { color: var(--accent); }
+  .bnav-icon { font-size: 16px; display: block; margin-bottom: 3px; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    z-index: 200; display: flex; flex-direction: column;
+    padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bot) + 20px);
+    opacity: 0; pointer-events: none; transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .overlay-title { font-family: 'Unbounded', sans-serif; font-size: 16px; margin-bottom: 8px; }
+  .overlay-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .overlay-content { flex: 1; overflow-y: auto; font-size: 12px; line-height: 1.9; color: #aaa; }
+  .overlay-content p { margin-bottom: 12px; }
+  .overlay-content strong { color: var(--text); font-weight: 700; }
+  .overlay-close {
+    margin-top: 16px; padding: 14px;
+    border: 1px solid var(--line); border-radius: 2px;
+    background: transparent; color: var(--text); font-family: 'Space Mono', monospace;
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+    flex-shrink: 0;
+  }
+  .loading { text-align: center; padding: 40px 20px; }
+  .loading-dot { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin: 0 3px; animation: blink 1.2s ease-in-out infinite; }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+  .loading-text { font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 12px; }
+  .active-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); display: inline-block; margin-right: 6px; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="hdr">
+    <div>
+      <div class="hdr-name">Robert · v1 · 2026</div>
+      <div class="hdr-lvl" id="hdr-lvl">Уровень 0</div>
+    </div>
+    <div style="text-align:right">
+      <div class="hdr-xp" id="hdr-xp">0 XP</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px" id="hdr-done">0 квестов</div>
+    </div>
+  </div>
+  <div class="xp-bar"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+
+  <div class="scroll" id="main-scroll">
+    <div id="screen-quests" style="display:block">
+      <div class="map-row" id="loc-chips"></div>
+      <div id="quests-content"></div>
+    </div>
+  </div>
+
+  <div class="bnav">
+    <button class="bnav-btn active" id="nav-quests" onclick="switchTab('quests')">
+      <span class="bnav-icon">◈</span>Квесты
+    </button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="overlay-title" id="ov-title"></div>
+  <div class="overlay-sub" id="ov-sub"></div>
+  <div class="overlay-content" id="ov-content"></div>
+  <button class="overlay-close" onclick="closeOverlay()">Закрыть</button>
+</div>
+
+<script>
+// ТОЛЬКО GROQ API - БЕЗ CLAUDE/ANTHROPIC
+const GROQ_KEY_STORAGE = 'groq_api_key_quest';
+
+const HERO = { name: 'Роберт', version: 'v1 · 2026', totalXpTarget: 4000 };
+
+const LOCATIONS = [
+  { id: 'cinema', name: 'Кинемаполис', short: 'Кино РФ', color: '#c8ff00', xpTotal: 1000 },
+  { id: 'writer', name: 'Библиотека теней', short: 'Писатель', color: '#ff6b35', xpTotal: 1000 },
+  { id: 'hollywood', name: 'Врата Голливуда', short: 'Голливуд', color: '#ffd60a', xpTotal: 1000 },
+  { id: 'bmw', name: 'Гараж E39', short: 'BMW', color: '#888', xpTotal: 1000 },
+];
+
+const DEFAULT_QUESTS = [
+  { id: 'q1', loc: 'cinema', lvl: 1, active: true, title: 'Манифест режиссёра', desc: 'Кто ты как режиссёр. Жанр, стиль, референсы.', xp: 50, deadline: 'Воскресенье' },
+  { id: 'q2', loc: 'writer', lvl: 1, active: true, title: 'Первая страница', desc: 'Напиши первые 400 слов книги.', xp: 30, deadline: 'Суббота' },
+  { id: 'q3', loc: 'bmw', lvl: 1, active: false, title: 'Аудит BMW E39', desc: 'Список всего что нужно.', xp: 20, deadline: 'Пятница' },
+  { id: 'q4', loc: 'hollywood', lvl: 1, active: false, title: 'Насмотренность A24', desc: 'Посмотри 5 фильмов A24.', xp: 40, deadline: 'Воскресенье' },
+];
+
+let state = {
+  quests: JSON.parse(localStorage.getItem('rpg_quests') || 'null') || DEFAULT_QUESTS,
+  xp: JSON.parse(localStorage.getItem('rpg_xp') || '{}'),
+  done: parseInt(localStorage.getItem('rpg_done') || '0'),
+  locFilter: 'all',
+};
+
+function saveState() {
+  localStorage.setItem('rpg_quests', JSON.stringify(state.quests));
+  localStorage.setItem('rpg_xp', JSON.stringify(state.xp));
+  localStorage.setItem('rpg_done', state.done);
+}
+
+function totalXp() { return Object.values(state.xp).reduce((a,b) => a+b, 0); }
+function locXp(locId) { return state.quests.filter(q => q.loc === locId && q.done).reduce((s,q) => s+q.xp, 0); }
+
+function updateHeader() {
+  const xp = totalXp();
+  const lvl = Math.floor(xp / 400);
+  document.getElementById('hdr-xp').textContent = xp + ' XP';
+  document.getElementById('hdr-lvl').textContent = 'Уровень ' + lvl;
+  document.getElementById('hdr-done').textContent = state.done + ' квест' + (state.done === 1 ? '' : state.done < 5 ? 'а' : 'ов');
+  const pct = Math.min(100, Math.round(xp / HERO.totalXpTarget * 100));
+  document.getElementById('xp-fill').style.width = pct + '%';
+}
+
+function renderChips() {
+  const row = document.getElementById('loc-chips');
+  row.innerHTML = '';
+  const all = document.createElement('div');
+  all.className = 'loc-chip' + (state.locFilter === 'all' ? ' active' : '');
+  all.innerHTML = 'Все<span class="loc-pct">— все квесты</span>';
+  all.onclick = () => { state.locFilter = 'all'; renderChips(); renderQuests(); };
+  row.appendChild(all);
+  LOCATIONS.forEach(loc => {
+    const xp = locXp(loc.id);
+    const pct = Math.round(xp / loc.xpTotal * 100);
+    const chip = document.createElement('div');
+    chip.className = 'loc-chip' + (state.locFilter === loc.id ? ' active' : '');
+    chip.innerHTML = loc.short + '<span class="loc-pct">' + pct + '% — ' + xp + ' XP</span>';
+    if (state.locFilter === loc.id) chip.style.borderColor = loc.color;
+    chip.onclick = () => { state.locFilter = loc.id; renderChips(); renderQuests(); };
+    row.appendChild(chip);
+  });
+}
+
+function renderQuests() {
+  const container = document.getElementById('quests-content');
+  container.innerHTML = '';
+  const filtered = state.quests.filter(q => state.locFilter === 'all' || q.loc === state.locFilter);
+  const active = filtered.filter(q => !q.done);
+  const done = filtered.filter(q => q.done);
+
+  if (active.length > 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'sec-lbl';
+    lbl.innerHTML = '<span class="active-dot"></span>Активные квесты';
+    container.appendChild(lbl);
+    active.forEach(q => container.appendChild(buildQuestCard(q)));
+  }
+  if (done.length > 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'sec-lbl';
+    lbl.textContent = 'Выполнено';
+    container.appendChild(lbl);
+    done.forEach(q => container.appendChild(buildQuestCard(q)));
+  }
+}
+
+function buildQuestCard(q) {
+  const loc = LOCATIONS.find(l => l.id === q.loc);
+  const card = document.createElement('div');
+  card.className = 'quest-card' + (q.active ? ' active-quest' : '') + (q.done ? ' done-quest' : '');
+  card.innerHTML = `
+    <div class="qcard-top">
+      <div class="qcard-meta">
+        <span class="qcard-loc">${loc ? loc.short : q.loc}</span>
+        <span class="qcard-lvl">Ур.${q.lvl}</span>
+        <span class="qcard-xp-badge">+${q.xp} XP</span>
+      </div>
+      <div class="qcard-title">${q.title}</div>
+      <div class="qcard-desc">${q.desc}</div>
+      ${q.deadline && !q.done ? `<div class="qcard-deadline">⏱ ${q.deadline}</div>` : ''}
+    </div>
+    <div class="qcard-actions">
+      ${!q.done ? `<button class="qcard-btn primary" onclick="completeQuest('${q.id}')">Выполнил ✓</button>` : '<button class="qcard-btn" disabled>Готово</button>'}
+      <button class="qcard-btn" onclick="expandQuest('${q.id}')">Подробнее →</button>
+    </div>
+  `;
+  return card;
+}
+
+function completeQuest(qid) {
+  const q = state.quests.find(x => x.id === qid);
+  if (!q || q.done) return;
+  q.done = true;
+  state.xp[q.loc] = (state.xp[q.loc] || 0) + q.xp;
+  state.done++;
+  saveState();
+  updateHeader();
+  renderChips();
+  renderQuests();
+  const prompt = `Роберт выполнил квест "${q.title}". Дай короткий совет что делать дальше.`;
+  askGroq(prompt, (text) => {
+    showOverlay('Квест выполнен! +' + q.xp + ' XP', q.title, text);
+  });
+}
+
+function expandQuest(qid) {
+  const q = state.quests.find(x => x.id === qid);
+  if (!q) return;
+  const loc = LOCATIONS.find(l => l.id === q.loc);
+  const prompt = `Дай подробный план выполнения: "${q.title}"`;
+  showOverlay(q.title, (loc ? loc.short : '') + ' · Ур.' + q.lvl + ' · +' + q.xp + ' XP', '<div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span><div class="loading-text">Загружаю...</div></div>');
+  askGroq(prompt, (text) => {
+    document.getElementById('ov-content').innerHTML = formatText(text);
+  });
+}
+
+function switchTab(tab) {
+  document.getElementById('screen-' + tab).style.display = 'block';
+}
+
+function showOverlay(title, sub, content) {
+  document.getElementById('ov-title').textContent = title;
+  document.getElementById('ov-sub').textContent = sub;
+  document.getElementById('ov-content').innerHTML = typeof content === 'string' ? formatText(content) : content;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeOverlay() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function formatText(text) {
+  return '<p>' + text.replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>') + '</p>';
+}
+
+// GROQ API - ТОЛЬКО GROQ!
+async function askGroq(userPrompt, callback) {
+  let key = localStorage.getItem(GROQ_KEY_STORAGE);
+  
+  if (!key) {
+    const userInput = prompt('Введи Groq API ключ (получи на console.groq.com):');
+    if (!userInput) {
+      callback('Ключ не введён.');
+      return;
+    }
+    key = userInput;
+    localStorage.setItem(GROQ_KEY_STORAGE, key);
+  }
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'mixtral-8x7b-32768',
+        messages: [{ role: 'user', content: userPrompt }],
+        max_tokens: 1000,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Groq API error: ' + response.status);
+    }
+
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content || 'Нет ответа';
+    callback(text);
+  } catch(error) {
+    console.error('Groq error:', error);
+    callback('Ошибка Groq: ' + error.message);
+  }
+}
+
+// INIT
+updateHeader();
+renderChips();
+renderQuests();
+</script>
+</body>
+</html>
